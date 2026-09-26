@@ -1,0 +1,62 @@
+services:
+
+  database:
+    image: postgres:16-alpine
+    env_file:
+      - ./database/.env
+    ports:
+      - "5432:5432"
+    networks:
+      my_network:
+        ipv4_address: 172.18.0.12
+    restart: unless-stopped # Ensures the database container restarts automatically unless stopped manually
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck: # Define health check so we use it in depends_on conditions for other services
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5000:5000"
+    networks:
+      my_network:
+        ipv4_address: 172.18.0.11
+    restart: unless-stopped # Ensures the backend container restarts automatically unless stopped manually
+    depends_on: # Ensure the backend service waits for the database to be healthy before starting
+      database:
+          condition: service_healthy
+  frontend:
+    build:
+      context: ./frontend
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "3000:3000"
+    networks:
+      my_network:
+        ipv4_address: 172.18.0.10
+    restart: unless-stopped # Ensures the frontend container restarts automatically unless stopped manually
+    depends_on: # Ensure the frontend service waits for the backend to be healthy before starting
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  my_network:
+    # NAT
+    # https://www.youtube.com/watch?v=W7X6u2BGVRY
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16

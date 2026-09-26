@@ -1,0 +1,14 @@
+{
+  "name": "todo-frontend",
+  "version": "1.0.0",
+  "description": "Frontend tier - serves static UI and proxies /api to the backend via env var",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.0",
+    "dotenv": "^16.4.5"
+  }
+}
