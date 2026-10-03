@@ -1,9 +1,16 @@
 # 3-Tier Todo App — Docker & Kubernetes Practice
 
-A minimal 3-tier app for practicing container deployment. Every cross-service
-connection is driven by environment variables, so the **only thing that
-changes between your Docker setup and your Kubernetes setup is the values of
-those env vars** — not the application code.
+## 1. Architecture
+
+A minimal 3-tier todo app for practicing container deployment:
+
+- **Frontend**: Node/Express serving a static UI and proxying `/api/*` to the backend.
+- **Backend**: Node/Express REST API for todos.
+- **Database**: PostgreSQL, seeded by `database/init.sql`.
+
+Every cross-service connection is driven by environment variables, so the
+**only thing that changes between the Docker setup and the Kubernetes setup is
+the values of those env vars** — not the application code.
 
 ```
  [ browser ]
@@ -64,22 +71,53 @@ Useful once, just to confirm the app itself works before you containerize it.
 3. `cd frontend && npm install && npm start` — export `BACKEND_URL=http://localhost:5000` first.
 4. Open `http://localhost:3000`.
 
-## What's next (your practice)
+## 2. Docker deployment
 
-This repo intentionally stops at the application code. To practice:
+Prerequisites: Docker, and a `.env` file in each of `database/`, `backend/`
+and `frontend/` (they are git-ignored, and `docker/docker-compose.yaml`
+reads them).
 
-1. **Docker**: write a `Dockerfile` for `frontend/` and `backend/`, then a
-   `docker-compose.yml` wiring all three services together on a shared
-   network, using the env vars above (service names become `DB_HOST` /
-   `BACKEND_URL`). Mount `database/init.sql` into the Postgres container's
-   `/docker-entrypoint-initdb.d/`.
-2. **Kubernetes**: translate the same setup into Deployments + Services
-   (ClusterIP for backend/db, NodePort or Ingress for frontend), a
-   ConfigMap/Secret for the DB credentials, and a PersistentVolumeClaim for
-   Postgres data. Notice how `DB_HOST`/`BACKEND_URL` become Kubernetes
-   Service DNS names instead of docker-compose service names — same app,
-   same env var names, different plumbing underneath.
+```
+cd docker
+docker compose up --build
+```
 
-Good things to research while you build the k8s manifests: `ConfigMap` vs
-`Secret`, `ClusterIP` vs `NodePort`, `Deployment` vs `StatefulSet` (for
-Postgres), and `PersistentVolumeClaim`.
+`--build` rebuilds the frontend and backend images if the code changed.
+
+Open the app at <http://localhost:3000>.
+
+To stop it, run `docker compose down` (add `-v` to also delete the database volume).
+
+## 3. Kubernetes deployment (kind)
+
+Prerequisites: Docker, [kind](https://kind.sigs.k8s.io/) and `kubectl`.
+Run the commands from the repo root.
+
+1. Build the images. The manifests expect the tags `frontend:latest` and `backend:latest`:
+   ```
+   docker build -t frontend:latest ./frontend
+   docker build -t backend:latest ./backend
+   ```
+2. Create the cluster (1 control-plane + 2 workers, named `docker-vs-kubernetes`):
+   ```
+   kind create cluster --config kubernetes/kind_cluster.yaml
+   ```
+3. Load the images into the cluster nodes. kind nodes can't see your local Docker images otherwise:
+   ```
+   kind load docker-image frontend:latest backend:latest --name docker-vs-kubernetes
+   ```
+4. Apply the manifests:
+   ```
+   kubectl apply -f kubernetes/
+   ```
+   `kind_cluster.yaml` lives in the same folder, so kubectl reports an error
+   for that one file. It is not a Kubernetes resource and the error can be ignored.
+5. Check that everything is running:
+   ```
+   kubectl get pods -o wide
+   ```
+
+Open the app at <http://localhost:30000> or <http://localhost:30001>. These
+are the two worker nodes, each mapping its NodePort `30000` to a host port.
+
+To remove the cluster, run `kind delete cluster --name docker-vs-kubernetes`.

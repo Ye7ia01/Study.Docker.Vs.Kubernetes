@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+data:
+  DB_HOST: database-service # Host name for DB, Kuernetes DNS resolve to the CLuster Ip
+  PORT: "5000"

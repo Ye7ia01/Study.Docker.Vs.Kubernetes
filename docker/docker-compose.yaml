@@ -3,12 +3,12 @@ services:
   database:
     image: postgres:16-alpine
     env_file:
-      - ./database/.env
+      - ../database/.env
     ports:
       - "5432:5432"
     networks:
       my_network:
-        ipv4_address: 172.18.0.12
+        ipv4_address: 172.16.0.12
     restart: unless-stopped # Ensures the database container restarts automatically unless stopped manually
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -22,30 +22,30 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
     env_file:
-      - ./backend/.env
+      - ../backend/.env
     ports:
       - "5000:5000"
     networks:
       my_network:
-        ipv4_address: 172.18.0.11
+        ipv4_address: 172.16.0.11
     restart: unless-stopped # Ensures the backend container restarts automatically unless stopped manually
     depends_on: # Ensure the backend service waits for the database to be healthy before starting
       database:
           condition: service_healthy
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
     env_file:
-      - ./frontend/.env
+      - ../frontend/.env
     ports:
       - "3000:3000"
     networks:
       my_network:
-        ipv4_address: 172.18.0.10
+        ipv4_address: 172.16.0.10
     restart: unless-stopped # Ensures the frontend container restarts automatically unless stopped manually
-    depends_on: # Ensure the frontend service waits for the backend to be healthy before starting
+    depends_on: 
       - backend
 
 volumes:
@@ -59,4 +59,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.18.0.0/16
+        - subnet: 172.16.0.0/16

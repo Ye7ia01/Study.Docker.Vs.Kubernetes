@@ -1,0 +1,14 @@
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database-pvc
+spec:
+  accessModes:
+    # Never use ReadWriteMany for db replication
+    # It's not correct to have mutliple database same the share file system since it causes issues
+    # Also each database will be having its own cache which will corrupt data consistency
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
